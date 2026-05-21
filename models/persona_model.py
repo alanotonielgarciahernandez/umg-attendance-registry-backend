@@ -20,6 +20,7 @@ class Persona( models.Model ):
     carnet: str = models.CharField( max_length=20, blank=True, null=True )
     fecha_registro: datetime = models.DateTimeField( blank=True, null=True )
     vector_facial: bytes = models.BinaryField( blank=True, null=True )
+    path_photo: str = models.CharField( max_length=255, blank=True, null=True )
 
     # Metadatos del modelo.
     class Meta:

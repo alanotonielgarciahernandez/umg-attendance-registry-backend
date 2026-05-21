@@ -22,9 +22,10 @@ def get_personas() -> list[ dict ]:
             'tipo_persona': persona.tipo_persona,
             'carrera': persona.carrera,
             'seccion': persona.seccion,
-            'vector_facial': base64.b64encode( persona.vector_facial ).decode( 'utf-8' ) if persona.vector_facial else None,
             'carnet': persona.carnet,
-            'fecha_registro': persona.fecha_registro
+            'fecha_registro': persona.fecha_registro,
+            'vector_facial': base64.b64encode( persona.vector_facial ).decode( 'utf-8' ) if persona.vector_facial else None,
+            'path_photo': persona.path_photo,
         }
         for persona in personas
     ]
