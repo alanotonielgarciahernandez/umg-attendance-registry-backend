@@ -1,6 +1,9 @@
 # iniciar_sesion.py
 # Script para manejar el proceso de inicio de sesión.
 
+# Importar hasher de contraseñas.
+from helpers.hash_password import verify_password
+
 # Importar modelo de usuario.
 from middlewares.validate_role import validateRole
 from models.usuario_model import Usuario
@@ -11,8 +14,8 @@ def try_login( correo: str, password: str ) -> Usuario | None:
     if not usuario:
         return None
 
-    # Comparar contraseñas.
-    if usuario.password != password:
+    # Comparar la contraseña ingresada con el hash almacenado.
+    if not verify_password( password, usuario.password ):
         return None
     
     # Validar rol del usuario.

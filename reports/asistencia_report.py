@@ -8,12 +8,29 @@ from datetime import date
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, Image as PlatypusImage
+import io
+import os
+import urllib.request
 
 # Importar modelos.
 from models.registro_model import Asistencia
 from models.curso_model import Curso
 from models.persona_model import Persona
+
+# Carga imagen de la persona.
+def _cargar_fotografia( path: str ):
+    dimensiones: int = 40
+    ruta_placeholder = os.path.abspath( os.path.join(os.path.dirname( __file__ ), '..', 'assets', 'images', 'pfp-placeholder.jpg' ) )
+    
+    # Extraer la imagen.
+    if path:
+        with urllib.request.urlopen( path, timeout=5 ) as resp:
+            data = resp.read()
+        return PlatypusImage( io.BytesIO( data ), width=dimensiones, height=dimensiones )
+
+    # Si no hay ruta o no se pudo cargar la imagen, usar el placeholder.
+    return PlatypusImage( ruta_placeholder, width=dimensiones, height=dimensiones )
 
 def generar_registro_asistencia( id_asignacion: int, fecha_asistencia: date, lista_asistencia: list[ dict ] ) -> str:
     # Obtener información del curso desde la base de datos.
@@ -125,7 +142,7 @@ def generar_registro_asistencia( id_asignacion: int, fecha_asistencia: date, lis
     canvas_y_position = 490
 
     # Construir los datos para la tabla de asistencia.
-    table_data = [ [ 'Nombre', 'Estado' ] ]
+    table_data = [ [ 'Foto', 'Nombre', 'Estado' ] ]
     
     # Estilos para la tabla de asistencia.
     style_list = [
@@ -137,7 +154,7 @@ def generar_registro_asistencia( id_asignacion: int, fecha_asistencia: date, lis
         ( 'BOTTOMPADDING', ( 0, 0 ), ( -1, 0 ), 8 ),
         ( 'TOPPADDING', ( 0, 0 ), ( -1, 0 ), 8 ),
         ( 'BACKGROUND', ( 0, 1 ), ( -1, -1 ), colors.HexColor('#F2F6FA') ),
-        ( 'ALIGN', ( 0, 1 ), ( 0, -1 ), 'LEFT' ),
+        ( 'ALIGN', ( 1, 1 ), ( 1, -1 ), 'LEFT' ),
         ( 'GRID', ( 0, 0 ), ( -1, -1 ), 0.5, colors.HexColor('#BDC3C7') ),
         ( 'FONTNAME', ( 0, 1 ), ( -1, -1 ), 'Helvetica' ),
         ( 'FONTSIZE', ( 0, 1 ), ( -1, -1 ), 10 ),
@@ -146,11 +163,15 @@ def generar_registro_asistencia( id_asignacion: int, fecha_asistencia: date, lis
 
     # Agregar filas de asistencia a la tabla.
     for index, assistance in enumerate( assitance_list, 1 ):
-        # Agregar la fila a la tabla (sin la columna de foto).
-        table_data.append( [
+        # Obtener imagen (usar placeholder si no hay ruta).
+        img_cell = _cargar_fotografia( assistance.persona.path_photo )
+
+        # Agregar la fila a la tabla (Foto, Nombre, Estado).
+        table_data.append([
+            img_cell,
             f'{ assistance.persona.nombre } { assistance.persona.apellido }',
             assistance.estado.capitalize(),
-        ] )
+        ])
 
         # Cambiar el color del texto del estado según si es presente o ausente.
         if assistance.estado.lower() == 'presente':
@@ -158,14 +179,14 @@ def generar_registro_asistencia( id_asignacion: int, fecha_asistencia: date, lis
         else:
             status_color = colors.HexColor( '#E74C3C' )
 
-        # Agregar estilos para la celda del estado (ahora es la columna 1).
-        style_list.append( ( 'TEXTCOLOR', ( 1, index ), ( 1, index ), status_color ) )
-        style_list.append( ( 'FONTNAME', ( 1, index ), ( 1, index ), 'Helvetica-Bold' ) )
+        # Agregar estilos para la celda del estado (columna 2 ahora).
+        style_list.append( ( 'TEXTCOLOR', ( 2, index ), ( 2, index ), status_color ) )
+        style_list.append( ( 'FONTNAME', ( 2, index ), ( 2, index ), 'Helvetica-Bold' ) )
 
     # Crear la tabla de asistencia con los datos y estilos definidos.
     table: Table = Table(
         data=table_data,
-        colWidths=[ 372, 140 ],
+        colWidths=[ 48, 324, 140 ],
         style=TableStyle( style_list )
     )
 
