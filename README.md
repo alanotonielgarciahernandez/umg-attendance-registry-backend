@@ -42,18 +42,28 @@ DB_PASSWORD=tu-contraseña-de-usuario-sql-server
 DB_HOST=tu-host-sql-server
 DB_PORT=puerto-de-sql-server
 EMAIL_EMISOR=tu-correo-electrónico
-EMAIL_PASSWORD=tu-contraseña-de-correo
-EMAIL_SMTP_SERVER=smtp.gmail.com
-EMAIL_SMTP_PORT=587
+
 # Opcionales para firma digital (PKCS#12 / .pfx)
-CERT_PATH=./your_certificate.pfx    # ruta al archivo .pfx o .p12 (puede ser absoluta)
+CERT_PATH=./tu_certificado.pfx    # ruta al archivo .pfx o .p12 (puede ser absoluta)
 CERT_PASSWORD=tu-contraseña-pfx     # contraseña del archivo .pfx
 ```
 
-## Ejecución (desarrollo)
-```bash
-py manage.py runserver
-```
+## Envío de correo con Gmail API (opcional)
+El envío de reportes por correo se realiza usando Gmail API y OAuth 2.0.
+
+### Requisitos en Google Cloud
+1. Crea o usa un proyecto en Google Cloud.
+2. Habilita la Gmail API.
+3. Configura la pantalla de consentimiento OAuth.
+4. Crea credenciales OAuth para una aplicación de escritorio o el flujo que uses para autorizar al usuario.
+5. Genera credenciales autorizadas con el scope `https://www.googleapis.com/auth/gmail.compose`.
+6. Guarda el archivo resultante como `secrets/token.json`.
+
+### Consideraciones importantes
+- `EMAIL_EMISOR` debe coincidir con la cuenta de Gmail que autorizó el token.
+- Si cambias los scopes, elimina `secrets/token.json` y vuelve a autorizar.
+- No subas `secrets/token.json` a un repositorio público.
+- Si el archivo `secrets/token.json` no existe o no es válido, el envío de correo no se completa.
 
 ## Firmas digitales (opcional)
 
@@ -66,6 +76,10 @@ Notas:
 - Si `CERT_PATH` no apunta a un archivo existente, no se firmarán los archivos PDF.
 - Asegúrate de que el archivo `.pfx` tenga permisos restringidos y no lo subas a repositorios públicos.
 
+## Ejecución (desarrollo)
+```bash
+py manage.py runserver
+```
 
 ## Ejecución con Docker
 ```bash
@@ -80,13 +94,12 @@ docker run -d --rm -p 8000:80 \
   -e DB_HOST=tu-host-sql-server \
   -e DB_PORT=puerto-de-sql-server \
   -e EMAIL_EMISOR=tu-correo-electrónico \
-  -e EMAIL_PASSWORD=tu-contraseña-de-correo \
-  -e EMAIL_SMTP_SERVER=smtp.gmail.com \
-  -e EMAIL_SMTP_PORT=587 \
-  -e CERT_PATH=./your_certificate.pfx \
+  -e CERT_PATH=./tu_certificado.pfx \
   -e CERT_PASSWORD=tu-contraseña-pfx \
   umg-assistance-registry
 ```
+
+Si vas a usar Gmail API dentro del contenedor, asegúrate de montar `secrets/token.json` en la ruta esperada por la aplicación o incluirlo en la imagen durante la construcción. Sin ese archivo, el envío de correo se detiene antes de llamar a Gmail.
 
 ## [ Endpoints ]( /ENDPOINTS.md )
 

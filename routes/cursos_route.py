@@ -93,9 +93,7 @@ class AsistenciaView( View ):
         firmar_pdf( pdf_path )
 
         # Enviar el PDF por correo electrónico al usuario.
-        mail_status: bool = enviar_email_registro_asistencia( pdf_path, user.correo, id_asignacion, body.get( 'fecha', date.today() ), user )
-        if not mail_status:
-            return JsonResponse( { 'detail': 'Error al enviar el correo.' }, status=500 )
+        enviar_email_registro_asistencia( pdf_path, user.correo, id_asignacion, body.get( 'fecha', date.today() ), user )
 
         # Serializar manualmente.
         data: dict = {

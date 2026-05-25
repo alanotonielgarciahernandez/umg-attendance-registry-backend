@@ -1,7 +1,7 @@
 # Files and directories to exclude from Docker build context
 .env
 media/
-certs/
+secrets/
 .git
 .venv
 venv/

@@ -1,8 +1,8 @@
 # Media folder
 media/
 
-# Certificates
-certs/
+# Secrets
+secrets/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,69 +2,81 @@
 # Reporte de asistencia por correo electrónico.
 
 # Importar módulos de Python.
+import base64
+import os.path
 from datetime import date
-import os
-import smtplib
+from email.message import EmailMessage
 
-# Importar módulos de terceros.
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
+# Importar módulos de Google.
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Importar modelos.
 from models.curso_model import Curso
 from models.usuario_model import Usuario
 
-def enviar_email_registro_asistencia( pdf_path: str, email_receptor: str, id_asignacion: int, fecha: date, user: Usuario ) -> bool:
-    # Obtener información del curso desde la base de datos.
-    curso: Curso = Curso.objects.get( id_asignacion=id_asignacion )
+# Scopes para la API de Gmail. Eliminar el archivo token.json en caso de modificación a los Scopes.
+SCOPES = [ 'https://www.googleapis.com/auth/gmail.compose' ]
 
-    # Crear el mensaje de correo electrónico.
-    message = MIMEMultipart()
-    message[ 'From' ] = os.getenv( 'EMAIL_EMISOR' )
+def enviar_email_registro_asistencia( pdf_path: str, email_receptor: str, id_asignacion: int, fecha: date, user: Usuario ):
+  # Obtener información del curso desde la base de datos.
+  curso: Curso = Curso.objects.get( id_asignacion=id_asignacion )
+
+  credenciales = None
+  
+  # Cargar credenciales desde el archivo token.json si existe.
+  if os.path.exists( 'secrets/token.json' ):
+    credenciales = Credentials.from_authorized_user_file( 'secrets/token.json', SCOPES )
+  
+  # Si no hay credenciales válidas, iniciar el proceso de autenticación.
+  if not credenciales or not credenciales.valid:
+    if credenciales and credenciales.expired and credenciales.refresh_token:
+      credenciales.refresh( Request() )
+    else:
+      print( 'No se encontraron credenciales válidas. Por favor, autentíquese para generar el archivo token.json.' )
+      return
+    
+    # Guardar las credenciales para la próxima ejecución.
+    with open( 'secrets/token.json', 'w' ) as token:
+      token.write( credenciales.to_json() )
+
+  try:
+    # Crear el servicio de Gmail y el mensaje de correo electrónico.
+    service = build( 'gmail', 'v1', credentials=credenciales )
+    message = EmailMessage()
+
+    # Encabezados del correo electrónico.
     message[ 'To' ] = email_receptor
-    message[ 'Subject' ] = 'Registro de Asistencia'
+    message[ 'From' ] = os.getenv( 'EMAIL_EMISOR' )
+    message[ 'Subject' ] = f'Registro de Asistencia - { fecha } - { curso.nombre_curso }'
 
-    # Texto simple en el cuerpo del correo con información del archivo adjunto.
-    body_text = (
+    # Cuerpo del correo electrónico.
+    message.set_content(
         f'Estimado/a { user.persona.nombre } { user.persona.apellido },\n\n'
         f'Le informamos que se ha registrado su asistencia para el curso: { curso.nombre_curso } el día { fecha }.\n\n'
         'Por favor revise el documento y confirme la recepción.\n\n'
         'Saludos cordiales,\nUniversidad Mariano Gálvez de Guatemala'
     )
-    message.attach( MIMEText( body_text, 'plain' ) )
 
-    # Adjunta el archivo PDF.
-    with open( pdf_path, 'rb' ) as attachment:
-        part = MIMEBase( 'application', 'octet-stream' )
-        part.set_payload( attachment.read() )
-        encoders.encode_base64( part )
+    # Agregar un archivo adjunto al correo electrónico.
+    attachment_filename = os.path.basename( pdf_path )
 
-    # Agregar encabezado para indicar que es un archivo adjunto.
-    part.add_header(
-        'Content-Disposition',
-        f'attachment; filename= { pdf_path.split( '/' )[ -1 ] }',
+    with open( pdf_path, "rb" ) as fp:
+      attachment_data = fp.read()
+    message.add_attachment( attachment_data, 'application', 'pdf', filename=attachment_filename )
+
+    encoded_message = base64.urlsafe_b64encode( message.as_bytes() ).decode()
+
+    create_message = { "raw": encoded_message }
+
+    # pylint: disable=E1101
+    send_message = (
+        service.users()
+        .messages()
+        .send( userId='me', body=create_message )
+        .execute()
     )
-
-    # Adjuntar el archivo al mensaje.
-    message.attach( part )
-
-    # Enviar el correo electrónico.
-    try:
-        with smtplib.SMTP( os.getenv( 'EMAIL_SMTP_SERVER' ), int( os.getenv( 'EMAIL_SMTP_PORT', 587 ) ) ) as server:
-            # Activar TLS para seguridad.
-            server.starttls()
-
-            # Iniciar sesión en el servidor SMTP.
-            server.login( os.getenv( 'EMAIL_EMISOR' ), os.getenv( 'EMAIL_PASSWORD' ) )
-            
-            # Enviar el correo electrónico.
-            server.sendmail( os.getenv( 'EMAIL_EMISOR' ), email_receptor, message.as_string() )
-
-            # Enviar el correo electrónico al mismo emisor para mantener un registro de los correos enviados.
-            server.sendmail( os.getenv( 'EMAIL_EMISOR' ), os.getenv( 'EMAIL_EMISOR' ), message.as_string() )
-
-        return True
-    except Exception:
-        return False
+  except HttpError as error:
+    print( f'An error occurred: { error }' )

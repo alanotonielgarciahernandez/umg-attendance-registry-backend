@@ -75,24 +75,6 @@ spec:
                 secretKeyRef:
                   name: umg-assistance-registry-backend-secret
                   key: EMAIL_EMISOR
-
-            - name: EMAIL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: umg-assistance-registry-backend-secret
-                  key: EMAIL_PASSWORD
-
-            - name: EMAIL_SMTP_SERVER
-              valueFrom:
-                secretKeyRef:
-                  name: umg-assistance-registry-backend-secret
-                  key: EMAIL_SMTP_SERVER
-
-            - name: EMAIL_SMTP_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: umg-assistance-registry-backend-secret
-                  key: EMAIL_SMTP_PORT
             
             - name: CERT_PATH
               valueFrom:
