@@ -1,4 +1,4 @@
-# UMG Assistance Registry — Backend
+# UMG Attendance Registry — Backend
 
 Backend en Django (6.x) para gestionar registros de asistencia de la Universidad Mariano Gálvez.
 
